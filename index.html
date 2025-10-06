@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BASELINER - Code Modernization Ecosystem - v1.3.6</title>
+<style>
+:root {
+    --bg-main: #f5f5f5;
+    --text-color: #333;
+    --panel-bg: #fff;
+    --panel-border: #ccc;
+    --header-bg: #eee;
+    --button-bg: #4CAF50;
+    --button-hover-bg: #45a049;
+    --button-secondary-bg: #6c757d;
+    --button-disabled-bg: #b0b0b0;
+    --code-bg: #1e1e1e;
+    --code-text: #e0e0e0;
+    --line-number-color: #888;
+    --diff-added-bg: rgba(46, 160, 67, 0.3);
+    --diff-removed-bg: rgba(248, 81, 73, 0.3);
+    --diff-manual-bg: rgba(187, 187, 68, 0.3);
+    --diff-detected-bg: rgba(74, 144, 226, 0.3);
+    --toast-bg: #333;
+    --toast-text: #fff;
+    --active-rule-color: #007bff;
+    --modal-overlay-bg: rgba(0,0,0,0.6);
+    --validation-ok-color: #28a745;
+    --validation-error-color: #dc3545;
+    --validation-exempt-color: #6c757d;
+    --status-ok: #28a745;
+    --status-error: #dc3545;
+    --status-connecting: #ffc107;
+}
+
+body.dark-mode {
+    --bg-main: #222;
+    --text-color: #eee;
+    --panel-bg: #333;
+    --panel-border: #555;
+    --header-bg: #444;
+    --button-disabled-bg: #555;
+    --code-bg: #282c34;
+    --toast-bg: #eee;
+    --toast-text: #333;
+    --active-rule-color: #58a6ff;
+    --modal-overlay-bg: rgba(0,0,0,0.8);
+    --validation-ok-color: #33c45b;
+    --validation-error-color: #ff4d4d;
+    --validation-exempt-color: #999;
+    --status-ok: #33c45b;
+    --status-error: #ff4d4d;
+    --status-connecting: #ffca2c;
+}
+
+html, body { height:100%; margin:0; font-family:Arial,sans-serif; background:var(--bg-main); color:var(--text-color); transition: background-color 0.3s, color 0.3s; }
+.header-main { display:flex; justify-content:space-between; align-items:center; gap: 15px; }
+h1,h2{margin:5px 0;color:var(--text-color);}
+h1 { flex-shrink: 0; }
+h1 small { font-size: 0.5em; color: var(--button-secondary-bg); }
+.header-controls { display: flex; align-items: center; gap: 15px; }
+.options-row{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px;}
+.button-row{margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+button{padding:5px 10px; border:none; border-radius:5px; background:var(--button-bg); color:white; cursor:pointer; transition: background-color 0.2s;}
+button:hover{background:var(--button-hover-bg);}
+button:disabled { background-color: var(--button-disabled-bg); cursor: not-allowed; }
+button.utility-btn, .demo-container select { background-color: var(--button-secondary-bg); }
+.demo-container { position: relative; display: inline-block; }
+.demo-container select { color: white; padding: 5px 10px; border-radius: 5px; border: none; -webkit-appearance: none; -moz-appearance: none; appearance: none; font-family: Arial, sans-serif; font-size: inherit; }
+.container{display:flex; flex-direction:column; height:100vh; padding:10px; box-sizing:border-box;}
+.top-section { overflow-y: auto; flex-shrink: 0;}
+.bottom-section { flex: 1; display: flex; flex-direction: column; min-height: 200px; }
+.panel{background:var(--panel-bg); border-radius:5px; border:1px solid var(--panel-border); margin-top:10px; overflow:hidden; display:flex; flex-direction:column;}
+.panel-header{padding:10px; cursor:pointer; background:var(--header-bg); font-weight:bold; user-select:none; display:flex; justify-content:space-between; align-items:center;}
+.panel-header .header-buttons { display:flex; gap: 5px; }
+.panel-header button { background:var(--button-secondary-bg); font-size: 0.8em; padding: 3px 8px;}
+.panel-content{padding:10px; display: none;}
+.panel-content.visible { display: block; }
+
+#connectionStatus { font-size: 0.8em; font-weight: bold; white-space: nowrap; }
+#connectionStatus.ok { color: var(--status-ok); }
+#connectionStatus.error { color: var(--status-error); cursor: help; }
+#connectionStatus.connecting { color: var(--status-connecting); }
+
+textarea.content-area, .rules-summary-grid, .rules-editor-grid { display: none; }
+textarea.content-area.visible { display: block; }
+.rules-summary-grid.visible, .rules-editor-grid.visible { display: grid; }
+
+.rules-summary-grid, .rules-editor-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; font-family: monospace; font-size: 0.9em; }
+.rules-summary-grid h4, .rules-editor-grid h4 { margin: 0 0 5px 0; border-bottom: 1px solid var(--panel-border); padding-bottom: 5px; }
+.rules-summary-grid .rule-summary-item { display: block; white-space: pre; cursor: help; }
+.rules-summary-grid .rule-summary-item.active-rule { font-weight:bold; color: var(--active-rule-color); }
+.rules-editor-grid .editor-container { display: flex; flex-direction: column; }
+.rules-editor-grid textarea { min-height: 150px; background:var(--bg-main); color:var(--text-color); border:1px solid var(--panel-border); font-family: monospace; }
+.rules-editor-grid .validation-container { margin-top: 5px; }
+.rules-editor-grid .validation-controls { font-size: 0.8em; margin-bottom: 5px; }
+.rules-editor-grid .validation-feedback { font-size: 0.8em; min-height: 3em; white-space: pre-wrap; line-height: 1.4; max-height: 100px; overflow-y: auto; border: 1px solid var(--panel-border); padding: 5px; background: var(--bg-main); }
+.validation-feedback span { cursor: pointer; display: block; }
+.validation-ok { color: var(--validation-ok-color); }
+.validation-error { color: var(--validation-error-color); }
+.validation-exempt { color: var(--validation-exempt-color); }
+
+textarea{width:100%; box-sizing:border-box; resize:vertical; font-family:monospace; background:var(--panel-bg); color:var(--text-color); border:1px solid var(--panel-border);}
+.code-container{display:flex; flex:1; gap:0; margin-top:10px; min-height:0; overflow:hidden;}
+.code-block{flex:1 1 0; min-width:0; display:flex; flex-direction:column; background:var(--code-bg); border-radius:5px; overflow:hidden;}
+.code-block h3{margin:0; padding:10px; background:#222; color:var(--code-text); display:flex; justify-content:space-between; align-items:center;}
+.code-block h3 .header-buttons { display:flex; gap: 5px; }
+.code-block h3 .header-buttons button { font-size:0.8em; padding:3px 8px; background:var(--button-secondary-bg); }
+.code-content{flex:1; overflow:auto; padding:0; font-family:monospace; color:var(--code-text);}
+#finalCodeBlock .code-content { display: flex; }
+#finalCodeTextarea { height: 100%; background:var(--code-bg); color:var(--code-text); border:none; resize:none; padding:5px; }
+.line-numbers div{display:flex; position:relative; line-height:1.2em; box-sizing:border-box;}
+.line-numbers div span.line-number{width:35px; text-align:right; color:var(--line-number-color); display:block; padding-right:5px; flex-shrink:0;}
+.line-numbers div span.line-text{flex:1; white-space:pre; overflow-wrap:normal; padding: 0 5px;}
+.diff-added span.line-text{background-color:var(--diff-added-bg);}
+.diff-removed span.line-text{background-color:var(--diff-removed-bg); text-decoration:line-through;}
+.diff-manual span.line-text{background-color:var(--diff-manual-bg);}
+.diff-detected span.line-text{background-color:var(--diff-detected-bg);}
+.resizer-v { flex: 0 0 10px; background: var(--header-bg); cursor: col-resize; user-select: none; border-left: 1px solid var(--panel-border); border-right: 1px solid var(--panel-border); }
+.resizer-h { height: 10px; background: var(--header-bg); cursor: row-resize; user-select: none; border-top: 1px solid var(--panel-border); border-bottom: 1px solid var(--panel-border); }
+#toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
+.toast { background: var(--toast-bg); color: var(--toast-text); padding: 15px; border-radius: 5px; margin-top: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.5s; font-size:0.9em; white-space: pre-wrap; max-width: 600px; max-height: 80vh; overflow-y: auto; cursor: pointer; }
+.toast.show { opacity: 1; }
+
+.tooltip { position: fixed; display: none; background: var(--toast-bg); color: var(--toast-text); border-radius: 5px; padding: 10px; font-size: 0.9em; z-index: 2000; max-width: 300px; pointer-events: none; }
+.tooltip strong { color: var(--active-rule-color); }
+.tooltip a { color: var(--active-rule-color); }
+
+/* Modal Styles */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--modal-overlay-bg); display: none; justify-content: center; align-items: center; z-index: 3000; }
+.modal-content { background: var(--panel-bg); padding: 20px; border-radius: 5px; width: 80%; max-width: 900px; max-height: 80%; overflow-y: auto; display: flex; flex-direction: column; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px; margin-bottom: 10px; }
+.modal-close-btn { font-size: 1.5em; cursor: pointer; background: none; border: none; color: var(--text-color); }
+.modal-body .filter-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+.modal-body select, .modal-body input { background: var(--bg-main); color: var(--text-color); border: 1px solid var(--panel-border); padding: 5px; border-radius: 3px; }
+.modal-body #explorerSearchInput { flex-grow: 1; }
+.results-list { list-style: none; padding: 0; font-family: monospace; font-size: 0.9em; }
+.results-list li { padding: 8px; border-bottom: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.results-list li:last-child { border-bottom: none; }
+.results-list a { color: var(--active-rule-color); text-decoration: none; }
+.audit-report h4 { margin-top: 15px; border-bottom: 1px solid var(--panel-border); padding-bottom: 5px; }
+.audit-report ul { margin-top: 5px; padding-left: 20px; }
+
+/* Tour Console Styles */
+#tourConsole {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 350px;
+    max-height: 50vh;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 5px;
+    z-index: 4000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    flex-direction: column;
+}
+#tourConsoleHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: var(--header-bg);
+    font-weight: bold;
+    cursor: move;
+}
+#tourConsoleHeader .controls { display: flex; gap: 10px; }
+#tourMuteBtn, #tourCloseBtn {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 0 5px;
+}
+#tourMessages {
+    padding: 10px;
+    overflow-y: auto;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+#tourMessages .tour-message {
+    padding: 8px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+    border: 1px solid var(--panel-border);
+}
+#tourMessages .tour-message:last-child { margin-bottom: 0; }
+#tourMessages .tour-message p { margin: 0 0 10px 0; }
+#tourMessages .tour-message button { margin-top: 5px; }
+
+/* Showcase Demo Styles */
+.showcase-highlight {
+    transition: box-shadow 0.3s ease-in-out, background-color 0.3s ease-in-out;
+    box-shadow: 0 0 15px 5px var(--active-rule-color);
+    border-radius: 5px;
+}
+</style>
+</head>
+<body>
+
+<div id="explorerModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Explore Web Platform Baseline</h2>
+            <button id="explorerCloseBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="filter-bar">
+                <select id="explorerGroup">
+                    <option value="">All Groups</option><option value="api">API</option><option value="css">CSS</option><option value="html">HTML</option><option value="http">HTTP</option><option value="javascript">JavaScript</option><option value="webassembly">WebAssembly</option><option value="webcomponents">Web Components</option>
+                </select>
+                <select id="explorerStatus">
+                    <option value="">All Statuses</option><option value="newly">Newly Available</option><option value="widely">Widely Available</option>
+                </select>
+                <input type="text" id="explorerSearchInput" placeholder="Search in results..."><button id="explorerSearchBtn" class="utility-btn">Search API</button>
+            </div>
+            <ul id="explorerResults" class="results-list"><li>Use filters and "Search API" to see results...</li></ul>
+        </div>
+    </div>
+</div>
+<div id="auditModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Project Audit Report</h2>
+            <button id="auditCloseBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div id="auditReport" class="modal-body audit-report"></div>
+    </div>
+</div>
+<div id="tourConsole">
+    <div id="tourConsoleHeader">
+        <span>Guided Tour</span>
+        <div class="controls">
+            <button id="tourMuteBtn" title="Toggle Voice">🔊</button>
+            <button id="tourCloseBtn" title="End Tour">&times;</button>
+        </div>
+    </div>
+    <div id="tourMessages"></div>
+</div>
+<div id="tooltip" class="tooltip"></div>
+<div id="toast-container"></div>
+<div class="container">
+    <div class="top-section">
+        <div class="header-main">
+            <h1>BASELINER <small>v1.3.6</small></h1>
+            <div class="header-controls">
+                <span id="connectionStatus" class="connecting">Status: 🟡 Connecting...</span>
+                <button id="themeToggle" title="Toggle light/dark theme">Toggle Theme</button>
+            </div>
+        </div>
+        <div id="optionsRow" class="options-row">
+            <label for="codeType" title="Select the type of code you are working with">Code Type:</label>
+            <select id="codeType" title="Select HTML, JS, CSS, or TXT"><option>HTML</option><option>CSS</option><option>JS</option><option>TXT</option></select>
+            <label for="baselineLevel" title="Select which baseline features should be used">Baseline Level:</label>
+            <select id="baselineLevel" title="Choose Baseline preference"><option>Widely Available</option><option>Newly Available</option></select>
+            <label for="goal" title="Select your refactoring goal">Goal:</label>
+            <select id="goal" title="Select goal: Performance, Readability, etc."><option>Readability</option><option>Compatibility</option><option>Performance</option></select>
+            <label for="styleOutput" title="Select the style for the generated output (LLM Prompt only)">Output Style:</label>
+            <select id="styleOutput" title="Choose output style for the LLM Prompt"><option>Concise</option><option>Commented</option><option>Before/After Highlighted</option></select>
+        </div>
+        <div class="button-row">
+            <button id="auditProjectBtn" class="utility-btn" title="Analyze a folder of files for modernization opportunities">Audit Project</button>
+            <button id="exploreBaselineBtn" class="utility-btn" title="Discover web features and create new rules">Explore Baseline</button>
+            <button id="applyQuickFixesBtn" title="Apply safe, automatic refactoring based on rules matching your selections">Apply Quick Fixes</button>
+            <button id="generatePromptBtn" title="Generate a prompt for an external LLM">Generate LLM Prompt</button>
+            <button id="compareBtn" title="Compare original code with LLM output">Compare with LLM</button>
+            <button id="generateFinalCodeBtn" title="Show the final code in a new panel">Generate Final Code</button>
+            <div class="demo-container">
+                <select id="demoSelector" class="utility-btn" title="Run a Demo or Guided Tour">
+                    <option value="">Run Demo...</option>
+                    <option value="showcase" style="font-weight:bold; color: var(--active-rule-color);">▶️ Programmatic Showcase</option>
+                    <option value="tour" style="font-weight:bold;">Guided Tour: Fix a Rule</option>
+                    <option disabled>──────────</option>
+                    <option value="html">HTML Compatibility</option>
+                    <option value="css">CSS Readability</option>
+                    <option value="js">JS Performance</option>
+                    <option value="js-new">JS Readability (New)</option>
+                    <option value="txt">TXT Readability</option>
+                </select>
+            </div>
+            <button id="showHelpBtn" class="utility-btn" title="Show help information">Help</button>
+            <button id="showInfoBtn" class="utility-btn" title="Show tool information">Info</button>
+        </div>
+        <div class="panel">
+            <div class="panel-header" data-toggle="codeInput">
+                <span title="Collapsible code input area">▼ Code Input</span>
+                <div class="header-buttons">
+                    <button id="continueWithResultBtn" title="Copy the Final Code to the Input to continue refactoring">Continue with Result</button>
+                    <button id="loadFileCodeInputBtn" title="Load code from a local file">Load from File</button>
+                </div>
+            </div>
+            <textarea id="codeInput" rows="8" class="content-area visible" title="Paste your code here or load it from a file"></textarea>
+        </div>
+        <div class="panel">
+            <div id="promptPanelHeader" class="panel-header" data-toggle="promptOutput">
+                <span title="Collapsible generated prompt">► Generated Prompt</span>
+                <div class="header-buttons">
+                    <button id="copyPromptBtn" title="Copy the prompt to the clipboard">Copy Prompt</button>
+                </div>
+            </div>
+            <textarea id="promptOutput" readonly rows="5" class="content-area" title="Generated prompt for the LLM"></textarea>
+        </div>
+        <div id="llmPanel" class="panel">
+            <div id="llmPanelHeader" class="panel-header" data-toggle="llmOutput">
+                <span title="Collapsible LLM output area">► LLM Output</span>
+                <div class="header-buttons">
+                    <button id="loadFileLlmOutputBtn" title="Load LLM output from a local file">Load from File</button>
+                </div>
+            </div>
+            <textarea id="llmOutput" rows="8" class="content-area" title="Paste the refactored code from your LLM here or load it from a file"></textarea>
+        </div>
+        <div class="panel">
+            <div id="rulesPanelHeader" class="panel-header" data-toggle="rulesPanelContent">
+                <span title="Customize the rules for the 'Apply Quick Fixes' button">► Quick Fix Rules</span>
+                <div class="header-buttons">
+                    <button id="showRulesSummaryBtn" title="Show the compact summary view">Summary</button>
+                    <button id="showRulesEditorBtn" title="Show the full JSON editor">Full JSON</button>
+                    <button id="saveRulesBtn" title="Save custom rules in your browser for future sessions">Save</button>
+                    <button id="loadDefaultRulesBtn" title="Reset to the original default rules">Default</button>
+                </div>
+            </div>
+            <div id="rulesPanelContent" class="panel-content">
+                <div id="rulesSummary" class="rules-summary-grid" title="A compact summary of the available rules"></div>
+                <div id="rulesEditor" class="rules-editor-grid" title="Edit the full JSON rules here">
+                    <div class="editor-container">
+                        <h4>HTML</h4>
+                        <textarea id="rulesEditorHTML"></textarea>
+                        <div class="validation-container">
+                            <div class="validation-controls"><label><input type="checkbox" class="filter-errors-checkbox"> Show errors only</label></div>
+                            <div id="validationHTML" class="validation-feedback"></div>
+                        </div>
+                    </div>
+                    <div class="editor-container">
+                        <h4>CSS</h4>
+                        <textarea id="rulesEditorCSS"></textarea>
+                        <div class="validation-container">
+                             <div class="validation-controls"><label><input type="checkbox" class="filter-errors-checkbox"> Show errors only</label></div>
+                            <div id="validationCSS" class="validation-feedback"></div>
+                        </div>
+                    </div>
+                    <div class="editor-container">
+                        <h4>JS</h4>
+                        <textarea id="rulesEditorJS"></textarea>
+                        <div class="validation-container">
+                             <div class="validation-controls"><label><input type="checkbox" class="filter-errors-checkbox"> Show errors only</label></div>
+                            <div id="validationJS" class="validation-feedback"></div>
+                        </div>
+                    </div>
+                    <div class="editor-container">
+                        <h4>TXT</h4>
+                        <textarea id="rulesEditorTXT"></textarea>
+                         <div class="validation-container">
+                             <div class="validation-controls"><label><input type="checkbox" class="filter-errors-checkbox"> Show errors only</label></div>
+                            <div id="validationTXT" class="validation-feedback"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="resizer-h" id="resizerH"></div>
+
+    <div class="bottom-section">
+        <h2>Before / After Preview</h2>
+        <div class="code-container">
+            <div class="code-block" id="beforeBlock"><h3 title="Original code before refactoring">Before</h3><div id="beforeCode" class="code-content line-numbers"></div></div>
+            <div class="resizer-v" id="resizerV1"></div>
+            <div class="code-block" id="afterBlock"><h3><span>After (Editable)</span><div class="header-buttons"><button id="toggleManualBtn" title="Toggle visibility of manually edited lines">Toggle Manual</button></div></h3><div id="afterCode" class="code-content line-numbers"></div></div>
+            <div class="resizer-v" id="resizerV2"></div>
+            <div class="code-block" id="finalCodeBlock" style="display:none;"><h3><span>Final Code</span><div id="finalCodeButtons" class="header-buttons"><button id="copyFinalCodeBtn" title="Copy the final code to the clipboard">Copy Code</button><button id="saveCodeBtn" title="Save final code as a file">Save File</button></div></h3><div class="code-content"><textarea id="finalCodeTextarea" readonly></textarea></div></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/diff@5.1.0/dist/diff.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ui = {
+        // Main UI
+        afterCode: document.getElementById('afterCode'),
+        beforeCode: document.getElementById('beforeCode'),
+        codeInput: document.getElementById('codeInput'),
+        promptOutput: document.getElementById('promptOutput'),
+        llmOutput: document.getElementById('llmOutput'),
+        finalCodeTextarea: document.getElementById('finalCodeTextarea'),
+        finalCodeBlock: document.getElementById('finalCodeBlock'),
+        llmPanel: document.getElementById('llmPanel'),
+        // Selectors
+        codeType: document.getElementById('codeType'),
+        baselineLevel: document.getElementById('baselineLevel'),
+        goal: document.getElementById('goal'),
+        styleOutput: document.getElementById('styleOutput'),
+        demoSelector: document.getElementById('demoSelector'),
+        selectors: [document.getElementById('codeType'), document.getElementById('baselineLevel'), document.getElementById('goal')],
+        // Buttons
+        compareBtn: document.getElementById('compareBtn'),
+        copyFinalCodeBtn: document.getElementById('copyFinalCodeBtn'),
+        saveCodeBtn: document.getElementById('saveCodeBtn'),
+        copyPromptBtn: document.getElementById('copyPromptBtn'),
+        continueWithResultBtn: document.getElementById('continueWithResultBtn'),
+        auditProjectBtn: document.getElementById('auditProjectBtn'),
+        exploreBaselineBtn: document.getElementById('exploreBaselineBtn'),
+        applyQuickFixesBtn: document.getElementById('applyQuickFixesBtn'),
+        generatePromptBtn: document.getElementById('generatePromptBtn'),
+        generateFinalCodeBtn: document.getElementById('generateFinalCodeBtn'),
+        showRulesEditorBtn: document.getElementById('showRulesEditorBtn'),
+        showHelpBtn: document.getElementById('showHelpBtn'),
+        showInfoBtn: document.getElementById('showInfoBtn'),
+        // Rules
+        rulesEditor: document.getElementById('rulesEditor'),
+        rulesEditorHTML: document.getElementById('rulesEditorHTML'),
+        rulesEditorCSS: document.getElementById('rulesEditorCSS'),
+        rulesEditorJS: document.getElementById('rulesEditorJS'),
+        rulesEditorTXT: document.getElementById('rulesEditorTXT'),
+        rulesSummary: document.getElementById('rulesSummary'),
+        validationHTML: document.getElementById('validationHTML'),
+        validationCSS: document.getElementById('validationCSS'),
+        validationJS: document.getElementById('validationJS'),
+        validationTXT: document.getElementById('validationTXT'),
+        // Modals & Popups
+        tooltip: document.getElementById('tooltip'),
+        explorerModal: document.getElementById('explorerModal'),
+        auditModal: document.getElementById('auditModal'),
+        explorerCloseBtn: document.getElementById('explorerCloseBtn'),
+        auditCloseBtn: document.getElementById('auditCloseBtn'),
+        explorerSearchBtn: document.getElementById('explorerSearchBtn'),
+        explorerGroup: document.getElementById('explorerGroup'),
+        explorerStatus: document.getElementById('explorerStatus'),
+        explorerSearchInput: document.getElementById('explorerSearchInput'),
+        explorerResults: document.getElementById('explorerResults'),
+        auditReport: document.getElementById('auditReport'),
+        // Tour
+        tourConsole: document.getElementById('tourConsole'),
+        tourMessages: document.getElementById('tourMessages'),
+        tourMuteBtn: document.getElementById('tourMuteBtn'),
+        tourCloseBtn: document.getElementById('tourCloseBtn'),
+        // Showcase Targets
+        connectionStatus: document.getElementById('connectionStatus'),
+        mainHeader: document.querySelector('h1'),
+        optionsRow: document.getElementById('optionsRow'),
+        rulesPanelHeader: document.getElementById('rulesPanelHeader')
+    };
+
+    let showOnlyManual = false;
+    let baselineData = {};
+    let isTourMuted = false;
+    let explorerDataCache = [];
+    let englishVoice = null;
+
+    const defaultRules = JSON.stringify([
+        {"summary": "<b> → <strong>", "action": "substitute", "find": "<b>", "replace": "<strong>", "flags": "g", "type": ["HTML"], "baseline": ["Widely Available"], "goal": ["Compatibility"]},
+        {"summary": "</b> → </strong>", "action": "substitute", "find": "</b>", "replace": "</strong>", "flags": "g", "type": ["HTML"], "baseline": ["Widely Available"], "goal": ["Compatibility"]},
+        {"summary": "<i> → <em>", "action": "substitute", "find": "<i>", "replace": "<em>", "flags": "g", "type": ["HTML"], "baseline": ["Widely Available"], "goal": ["Readability"]},
+        {"summary": "</i> → </em>", "action": "substitute", "find": "</i>", "replace": "</em>", "flags": "g", "type": ["HTML"], "baseline": ["Widely Available"], "goal": ["Readability"]},
+        {"summary": "<font> → (removed)", "action": "substitute", "find": "<\\/?font[^>]*>", "replace": "", "flags": "gi", "type": ["HTML"], "baseline": ["Widely Available"], "goal": ["Compatibility"]},
+        {"summary": "align attr → (removed)", "action": "substitute", "find": "\\s*align=(\"|')(center|left|right)(\"|')", "replace": "", "flags": "gi", "type": ["HTML"], "baseline": ["Widely Available"], "goal": ["Compatibility"]},
+        {"summary": "border=0 → (removed)", "action": "substitute", "find": "\\s*border=(\"|')0(\"|')", "replace": "", "flags": "gi", "type": ["HTML"], "baseline": ["Widely Available"], "goal": ["Compatibility"]},
+        {"summary": "🔍 Inline Style Attr", "action": "detect", "find": "style=(\"|')", "flags": "gi", "type": ["HTML"], "baseline": ["Widely Available"], "goal": ["Readability"]},
+        {"summary": "var → let", "action": "substitute", "find": "\\bvar\\b", "replace": "let", "flags": "g", "type": ["JS"], "baseline": ["Widely Available"], "goal": ["Readability"]},
+        {"summary": "== → ===", "action": "substitute", "find": "==", "replace": "===", "flags": "g", "type": ["JS"], "baseline": ["Widely Available"], "goal": ["Performance"]},
+        {"summary": "!= → !==", "action": "substitute", "find": "!=", "replace": "!==", "flags": "g", "type": ["JS"], "baseline": ["Widely Available"], "goal": ["Performance"]},
+        {"summary": "🔍 innerHTML", "action": "detect", "find": "\\.innerHTML", "flags": "g", "type": ["JS"], "baseline": ["Widely Available"], "goal": ["Performance"]},
+        {"summary": "🔍 document.write", "action": "detect", "find": "document\\.write\\s*\\(", "flags": "g", "type": ["JS"], "baseline": ["Widely Available"], "goal": ["Performance"]},
+        {"summary": "🔍 Promises (e.g., .then())", "action": "detect", "find": "\\.then\\s*\\(", "flags": "g", "type": ["JS"], "baseline": ["Widely Available"], "goal": ["Readability"], "baselineFeatureId": "javascript.builtins.Promise"},
+        {"summary": "px → rem", "action": "substitute", "find": "(\\d*\\.?\\d+)px", "replace": "($1/16)rem", "flags": "g", "type": ["CSS"], "baseline": ["Widely Available"], "goal": ["Compatibility"]},
+        {"summary": "🔍 float", "action": "detect", "find": "float\\s*:", "flags": "g", "type": ["CSS"], "baseline": ["Widely Available"], "goal": ["Readability"]},
+        {"summary": "  (spaces) → \\t", "action": "substitute", "find": " {2,}", "replace": "\t", "flags": "g", "type": ["TXT"], "baseline": ["Widely Available"], "goal": ["Readability"]},
+        {"summary": "Empty lines → (removed)", "action": "substitute", "find": "^\\s*$\\n", "replace": "", "flags": "gm", "type": ["TXT"], "baseline": ["Widely Available"], "goal": ["Readability"]}
+    ], null, 2);
+
+    async function initializeAll() {
+        Object.values(ui).forEach(el => { if (!el) console.error("UI element is missing from the DOM:", el); });
+        
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        ui.applyQuickFixesBtn.addEventListener('click', applyQuickFixes);
+        ui.generatePromptBtn.addEventListener('click', generatePrompt);
+        ui.compareBtn.addEventListener('click', compareWithLLM);
+        ui.continueWithResultBtn.addEventListener('click', continueWithResult);
+        ui.generateFinalCodeBtn.addEventListener('click', generateFinalCode);
+        ui.demoSelector.addEventListener('change', runDemo);
+        ui.showHelpBtn.addEventListener('click', showHelp);
+        ui.showInfoBtn.addEventListener('click', showInfo);
+        document.getElementById('loadFileCodeInputBtn').addEventListener('click', () => loadFileInto('codeInput'));
+        ui.copyPromptBtn.addEventListener('click', copyPrompt);
+        document.getElementById('loadFileLlmOutputBtn').addEventListener('click', () => loadFileInto('llmOutput'));
+        document.getElementById('showRulesSummaryBtn').addEventListener('click', showRulesSummary);
+        ui.showRulesEditorBtn.addEventListener('click', showRulesEditor);
+        document.getElementById('saveRulesBtn').addEventListener('click', saveRules);
+        document.getElementById('loadDefaultRulesBtn').addEventListener('click', loadDefaultRules);
+        document.getElementById('toggleManualBtn').addEventListener('click', toggleManual);
+        ui.copyFinalCodeBtn.addEventListener('click', copyFinalCode);
+        ui.saveCodeBtn.addEventListener('click', saveCode);
+        ui.auditProjectBtn.addEventListener('click', runProjectAudit);
+        ui.exploreBaselineBtn.addEventListener('click', () => ui.explorerModal.style.display = 'flex');
+        ui.explorerCloseBtn.addEventListener('click', () => ui.explorerModal.style.display = 'none');
+        ui.auditCloseBtn.addEventListener('click', () => ui.auditModal.style.display = 'none');
+        ui.explorerSearchBtn.addEventListener('click', runBaselineSearch);
+        ui.explorerSearchInput.addEventListener('input', filterExplorerResults);
+        ui.explorerResults.addEventListener('click', handleExplorerClick);
+        ui.tourMuteBtn.addEventListener('click', toggleTourMute);
+        ui.tourCloseBtn.addEventListener('click', () => { if(confirm("End the guided tour?")) endTour(); });
+        [ui.rulesEditorHTML, ui.rulesEditorCSS, ui.rulesEditorJS, ui.rulesEditorTXT].forEach(editor => {
+            const container = editor.closest('.editor-container');
+            container.querySelector('.filter-errors-checkbox').addEventListener('change', () => validateRulesEditor(editor.id));
+            editor.addEventListener('input', () => validateRulesEditor(editor.id));
+        });
+        document.querySelectorAll('[data-toggle]').forEach(header => header.addEventListener('click', (e) => { if (!e.target.closest('.header-buttons')) togglePanel(header.dataset.toggle); }));
+
+        loadTheme();
+        loadSelectorSettings();
+        
+        const savedRules = localStorage.getItem('baseliner_rules_v1.3.6');
+        populateRulesEditors(savedRules || defaultRules);
+        
+        await loadBaselineData();
+        
+        showRulesSummary();
+        makeDraggable(ui.tourConsole, document.getElementById('tourConsoleHeader'));
+        makeResizable();
+        ui.selectors.forEach(sel => sel.addEventListener('change', () => { saveSelectorSettings(); updateActiveRulesHighlight(); }));
+        updateButtonStates();
+        validateAllRulesEditors();
+
+        const setEnglishVoice = () => {
+            const voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                englishVoice = voices.find(voice => voice.lang === 'en-US' || voice.lang === 'en-GB') || voices.find(voice => voice.lang.startsWith('en-'));
+            }
+        };
+        setEnglishVoice();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = setEnglishVoice;
+        }
+    }
+    
+    async function loadBaselineData() {
+        const query = encodeURIComponent('-baseline_status:limited');
+        const apiUrl = `https://api.webstatus.dev/v1/features?q=${query}`;
+    
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+            const { data } = await response.json();
+            if (!Array.isArray(data)) throw new Error("API response 'data' is not an array.");
+            
+            baselineData = data.reduce((acc, feature) => { acc[feature.feature_id] = feature; return acc; }, {});
+            
+            ui.connectionStatus.textContent = 'Status: 🟢 Connected';
+            ui.connectionStatus.className = 'ok';
+            enrichAndValidateRules();
+        } catch (error) {
+            ui.connectionStatus.textContent = 'Status: 🔴 Connection Failed';
+            ui.connectionStatus.className = 'error';
+            ui.connectionStatus.title = error.message;
+            console.error('Failed to load Web Platform Baseline data:', error);
+        }
+    }
+
+    function enrichAndValidateRules() {
+        const unifiedJson = getUnifiedRulesFromEditor();
+        if (unifiedJson === 'INVALID_JSON') return;
+        const currentRules = JSON.parse(unifiedJson);
+        let rulesModified = false;
+        const enrichedRules = currentRules.map(rule => {
+            if (rule.baselineFeatureId && baselineData[rule.baselineFeatureId]) {
+                const liveStatus = baselineData[rule.baselineFeatureId].baseline.status;
+                let targetStatus = (liveStatus === 'widely') ? 'Widely Available' : 'Newly Available';
+                if (!rule.baseline || rule.baseline[0] !== targetStatus) {
+                    rule.baseline = [targetStatus];
+                    rulesModified = true;
+                }
+            }
+            return rule;
+        });
+        if (rulesModified) {
+            populateRulesEditors(JSON.stringify(enrichedRules, null, 2));
+            showRulesSummary();
+            showToast('**Rules Synced!**\nRules auto-updated with the latest Baseline status.', 6000);
+        }
+    }
+
+    function togglePanel(elementId, forceState) {
+        const panelContent = document.getElementById(elementId);
+        if (!panelContent) return;
+        const header = panelContent.previousElementSibling;
+        const isVisible = panelContent.classList.contains('visible');
+        const shouldBeVisible = forceState === 'open' ? true : (forceState === 'closed' ? false : !isVisible);
+        
+        if (isVisible !== shouldBeVisible) {
+            panelContent.classList.toggle('visible', shouldBeVisible);
+            const icon = header.querySelector('span');
+            if (icon) {
+                const currentText = icon.textContent.substring(2);
+                icon.textContent = shouldBeVisible ? '▼ ' + currentText : '► ' + currentText;
+            }
+        }
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        localStorage.setItem('baseliner_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+    };
+
+    function loadTheme() { if (localStorage.getItem('baseliner_theme') === 'dark') document.body.classList.add('dark-mode'); }
+    
+    function showToast(message, duration = 3000) {
+        const toastContainer = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = message.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        toastContainer.appendChild(toast);
+        const dismiss = () => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); };
+        let timer = setTimeout(dismiss, duration);
+        toast.addEventListener('click', () => { clearTimeout(timer); dismiss(); });
+        setTimeout(() => toast.classList.add('show'), 10);
+    }
+    
+    function saveSelectorSettings() { localStorage.setItem('baseliner_selectors', JSON.stringify({ codeType: ui.codeType.value, baselineLevel: ui.baselineLevel.value, goal: ui.goal.value })); }
+    function loadSelectorSettings() {
+        const settings = JSON.parse(localStorage.getItem('baseliner_selectors'));
+        if (settings) {
+            ui.codeType.value = settings.codeType;
+            ui.baselineLevel.value = settings.baselineLevel;
+            ui.goal.value = settings.goal;
+        }
+    }
+    
+    function updateActiveRulesHighlight() {
+        const { value: type } = ui.codeType, { value: baseline } = ui.baselineLevel, { value: goal } = ui.goal;
+        document.querySelectorAll('.rule-summary-item').forEach(item => {
+            try {
+                const rule = JSON.parse(item.dataset.rule.replace(/&apos;/g, "'"));
+                item.classList.toggle('active-rule', rule.type?.includes(type) && rule.baseline?.includes(baseline) && rule.goal?.includes(goal));
+            } catch (e) {}
+        });
+    }
+
+    function makeResizable() {
+        const resizerH = document.getElementById('resizerH');
+        const topSection = document.querySelector('.top-section');
+        resizerH.addEventListener('mousedown', function(e) {
+            let y = e.clientY, topHeight = topSection.getBoundingClientRect().height;
+            const mouseMoveHandler = (e) => {
+                const newTopHeight = topHeight + (e.clientY - y);
+                if (newTopHeight > 100) { topSection.style.height = `${newTopHeight}px`; topSection.style.flex = 'none'; }
+            };
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', () => document.removeEventListener('mousemove', mouseMoveHandler), { once: true });
+        });
+    }
+
+    function getUnifiedRulesFromEditor() {
+        try {
+            return JSON.stringify([...JSON.parse(ui.rulesEditorHTML.value||'[]'), ...JSON.parse(ui.rulesEditorCSS.value||'[]'), ...JSON.parse(ui.rulesEditorJS.value||'[]'), ...JSON.parse(ui.rulesEditorTXT.value||'[]')], null, 2);
+        } catch (e) { return 'INVALID_JSON'; }
+    }
+
+    function loadDefaultRules() {
+        populateRulesEditors(defaultRules);
+        showRulesSummary();
+        validateAllRulesEditors();
+    };
+
+    function saveRules() {
+        const unifiedJson = getUnifiedRulesFromEditor();
+        if (unifiedJson === 'INVALID_JSON') return showToast('Error: Invalid JSON format.', 5000);
+        localStorage.setItem('baseliner_rules_v1.3.6', unifiedJson);
+        showToast('Rules saved successfully!');
+        showRulesSummary();
+    };
+    
+    function escapeHTML(str) { return str?.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;') || ''; }
+    
+    function showRulesSummary() {
+        const unifiedJson = getUnifiedRulesFromEditor();
+        if (unifiedJson === 'INVALID_JSON') {
+            showRulesEditor();
+            return showToast('Cannot show summary: Invalid JSON in the editor.', 5000);
+        }
+        const rules = JSON.parse(unifiedJson);
+        const categories = { HTML: [], CSS: [], JS: [], TXT: [] };
+        rules.forEach(rule => (rule.type || []).forEach(t => {
+            if (categories[t]) categories[t].push(`<span class="rule-summary-item" data-rule='${escapeHTML(JSON.stringify(rule).replace(/'/g, '&apos;'))}'>${escapeHTML(rule.summary)}</span>`);
+        }));
+        ui.rulesSummary.innerHTML = Object.entries(categories).map(([key, items]) => `<div><h4>${key}</h4><div>${items.join('')}</div></div>`).join('');
+        
+        ui.rulesSummary.querySelectorAll('.rule-summary-item').forEach(item => {
+            item.addEventListener('mousemove', e => {
+                try {
+                    const rule = JSON.parse(item.dataset.rule.replace(/&apos;/g, "'"));
+                    if (rule.baselineFeatureId && baselineData[rule.baselineFeatureId]) {
+                        const feature = baselineData[rule.baselineFeatureId];
+                        const url = feature.mdn_url || feature.spec?.links?.[0]?.url;
+                        ui.tooltip.innerHTML = `<strong>${feature.name}</strong><br>Status: ${feature.baseline?.status}<br><a href="${url}" target="_blank">Read on MDN</a>`;
+                        ui.tooltip.style.display = 'block';
+                        ui.tooltip.style.left = `${e.pageX + 15}px`;
+                        ui.tooltip.style.top = `${e.pageY + 15}px`;
+                    }
+                } catch (err) {}
+            });
+            item.addEventListener('mouseout', () => ui.tooltip.style.display = 'none');
+            item.addEventListener('click', () => {
+                try {
+                    const rule = JSON.parse(item.dataset.rule.replace(/&apos;/g, "'"));
+                    if (rule.baselineFeatureId && baselineData[rule.baselineFeatureId]) {
+                        const feature = baselineData[rule.baselineFeatureId];
+                        window.open(feature.mdn_url || feature.spec?.links?.[0]?.url, '_blank');
+                    }
+                } catch (err) {}
+            });
+        });
+        
+        ui.rulesEditor.classList.remove('visible');
+        ui.rulesSummary.classList.add('visible');
+        updateActiveRulesHighlight();
+    };
+
+    function showRulesEditor() {
+        ui.rulesSummary.classList.remove('visible');
+        ui.rulesEditor.classList.add('visible');
+    };
+
+    function populateRulesEditors(jsonString) {
+        let rules;
+        try { rules = JSON.parse(jsonString); } catch (e) { rules = JSON.parse(defaultRules); }
+        const categories = { HTML: [], CSS: [], JS: [], TXT: [] };
+        rules.forEach(rule => (rule.type || []).forEach(t => categories[t]?.push(rule)));
+        Object.entries(categories).forEach(([key, catRules]) => { ui[`rulesEditor${key}`].value = JSON.stringify(catRules, null, 2); });
+    }
+
+    function applyQuickFixes() {
+        const originalCode = ui.codeInput.value;
+        if (!originalCode) return showToast("Please input code first!");
+        const unifiedJson = getUnifiedRulesFromEditor();
+        if (unifiedJson === 'INVALID_JSON') return showToast('Cannot apply fixes: Invalid JSON in rules.');
+        const rules = JSON.parse(unifiedJson);
+        const { value: type } = ui.codeType, { value: baseline } = ui.baselineLevel, { value: goal } = ui.goal;
+        let fixedCode = originalCode;
+        const applicableRules = rules.filter(r => r.type?.includes(type) && r.baseline?.includes(baseline) && r.goal?.includes(goal));
+        if (applicableRules.length === 0) return showToast('No applicable "Quick Fix" rules found.');
+
+        applicableRules.filter(r => r.action === 'substitute').forEach(rule => {
+            try {
+                if (rule.find && rule.replace.includes('($1/16)rem')) {
+                    fixedCode = fixedCode.replace(new RegExp(rule.find, rule.flags), (_, p1) => `${parseFloat(p1)/16}rem`);
+                } else if (rule.find) {
+                    fixedCode = fixedCode.replace(new RegExp(rule.find, rule.flags), rule.replace);
+                }
+            } catch (e) {}
+        });
+
+        const detectionHighlights = new Set(), detectedPatterns = new Set();
+        const codeToDetect = fixedCode.split('\n');
+        applicableRules.filter(r => r.action === 'detect').forEach(rule => {
+            try { if (rule.find) {
+                const regex = new RegExp(rule.find, rule.flags);
+                codeToDetect.forEach((line, index) => {
+                    if (regex.test(line)) { detectionHighlights.add(index); detectedPatterns.add(rule.summary); }
+                });
+            } } catch (e) {}
+        });
+        highlightDiffInteractive(originalCode, fixedCode, [...detectionHighlights]);
+        if (detectedPatterns.size > 0 && !isShowcaseRunning) showToast(`**Detection Report:**\nDetected patterns requiring LLM review:\n- ${[...detectedPatterns].join('\n- ')}`, 7000);
+        updateButtonStates();
+    };
+
+    function generatePrompt() {
+        const code = ui.codeInput.value;
+        if (!code) return showToast("Please input code first!");
+        const { value: type } = ui.codeType, { value: baseline } = ui.baselineLevel, { value: goal } = ui.goal, { value: style } = ui.styleOutput;
+        const rules = JSON.parse(getUnifiedRulesFromEditor() || '[]');
+        const detectedFeatures = new Set();
+        rules.filter(r => r.action === 'detect' && r.type?.includes(type) && r.baseline?.includes(baseline) && r.goal?.includes(goal))
+            .forEach(rule => {
+                try { if (new RegExp(rule.find, rule.flags).test(code)) detectedFeatures.add((rule.baselineFeatureId && baselineData[rule.baselineFeatureId])?.name || rule.summary.replace('🔍 ', '')); } catch(e) {}
+            });
+        const analysisReport = detectedFeatures.size > 0 ? `**Analysis Report:**\nFocus on these patterns:\n- ${[...detectedFeatures].join('\n- ')}\n` : `**Analysis Note:**\nNo patterns auto-detected. Please perform a general review.\n`;
+        ui.promptOutput.value = `You are an expert web developer refactoring code according to the Web Platform Baseline.\n**Goal:** Improve **${goal}** using **${baseline}** features.\n${analysisReport}\n**Instructions:**\n- Rewrite code focusing on the Analysis Report.\n- Add comments explaining changes.\n- Output style: ${style}.\n- IMPORTANT: Preserve original formatting.\n**Input code (${type}):**\n\`\`\`\n${code}\n\`\`\``;
+        togglePanel('promptOutput', 'open');
+        ui.llmPanel.style.display = 'block';
+        updateButtonStates();
+    };
+
+    function copyPrompt() { navigator.clipboard.writeText(ui.promptOutput.value).then(() => showToast('Prompt copied!')); }
+    function compareWithLLM() {
+        if (!ui.llmOutput.value) return showToast("Please paste code from the LLM first.");
+        highlightDiffInteractive(ui.codeInput.value, ui.llmOutput.value);
+        updateButtonStates();
+    };
+    function continueWithResult() {
+        if (ui.afterCode.children.length === 0) return showToast("Generate Final Code first, or apply a fix.", 3000);
+        
+        const confirmMsg = "Overwrite 'Code Input' with the current 'After' view? This is part of the iterative workflow.";
+        if (isShowcaseRunning || confirm(confirmMsg)) {
+            ui.codeInput.value = [...ui.afterCode.querySelectorAll('.line-text')].map(s => s.textContent).join('\n');
+            ui.beforeCode.innerHTML = ''; ui.afterCode.innerHTML = '';
+            ui.llmOutput.value = '';
+            ui.finalCodeBlock.style.display = 'none';
+            if (!isShowcaseRunning) showToast("Result copied to Input. Ready for the next step.");
+            updateButtonStates();
+        }
+    }
+    function highlightDiffInteractive(before, after, detectionIndices = []) {
+        ui.beforeCode.innerHTML = ''; ui.afterCode.innerHTML = '';
+        const diff = Diff.diffLines(before, after);
+        let beforeIdx = 0, afterIdx = 0;
+        diff.forEach(part => {
+            const lines = part.value.split('\n');
+            if (lines[lines.length - 1] === '') lines.pop();
+            lines.forEach(line => {
+                if (part.added) {
+                    ui.beforeCode.appendChild(createLineDiv('', beforeIdx));
+                    ui.afterCode.appendChild(createLineDiv(line, afterIdx, true)).classList.add('diff-added');
+                    afterIdx++;
+                } else if (part.removed) {
+                    ui.beforeCode.appendChild(createLineDiv(line, beforeIdx)).classList.add('diff-removed');
+                    ui.afterCode.appendChild(createLineDiv('', afterIdx, true));
+                    beforeIdx++;
+                } else {
+                    ui.beforeCode.appendChild(createLineDiv(line, beforeIdx));
+                    ui.afterCode.appendChild(createLineDiv(line, afterIdx, true));
+                    beforeIdx++; afterIdx++;
+                }
+            });
+        });
+        updateLineNumbers();
+        detectionIndices.forEach(index => ui.afterCode.children[index]?.classList.add('diff-detected'));
+        ui.finalCodeBlock.style.display = 'none';
+        updateButtonStates();
+    }
+    function createLineDiv(lineText, idx, editable = false) {
+        const div = document.createElement('div');
+        const spanNum = document.createElement('span'); spanNum.className = 'line-number';
+        const spanText = document.createElement('span'); spanText.className = 'line-text'; spanText.textContent = lineText;
+        if (editable) {
+            spanText.contentEditable = 'true';
+            spanText.dataset.originalText = lineText;
+            spanText.addEventListener('input', () => div.classList.toggle('diff-manual', spanText.textContent !== spanText.dataset.originalText));
+        }
+        div.appendChild(spanNum); div.appendChild(spanText); return div;
+    }
+    function updateLineNumbers() { 
+        [...ui.beforeCode.children].forEach((div, i) => div.querySelector('.line-number').textContent = i+1); 
+        [...ui.afterCode.children].forEach((div, i) => div.querySelector('.line-number').textContent = i+1); 
+    }
+    function getFinalCode() { return [...ui.afterCode.querySelectorAll('.line-text')].map(s => s.textContent).join('\n'); }
+    function generateFinalCode() { 
+        if (ui.afterCode.children.length === 0) return showToast("No code in 'After' panel.");
+        ui.finalCodeTextarea.value = getFinalCode();
+        ui.finalCodeBlock.style.display = 'flex';
+        updateButtonStates();
+    };
+    function copyFinalCode() { navigator.clipboard.writeText(ui.finalCodeTextarea.value).then(() => showToast('Final code copied!')); };
+    function saveCode() { 
+        const blob = new Blob([getFinalCode()], { type: 'text/plain' }); 
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `final_code.${ui.codeType.value.toLowerCase()}`; a.click(); URL.revokeObjectURL(a.href); 
+    };
+    function toggleManual() { showOnlyManual = !showOnlyManual; updateManualDisplay(); };
+    function updateManualDisplay() { 
+        [...ui.afterCode.children].forEach(div => div.style.display = (!showOnlyManual || div.classList.contains('diff-manual')) ? 'flex' : 'none'); 
+        updateLineNumbers(); 
+    }
+    function updateButtonStates() {
+        const hasAfterCode = ui.afterCode.children.length > 0;
+        ui.compareBtn.disabled = !ui.llmOutput.value;
+        ui.copyPromptBtn.disabled = !ui.promptOutput.value;
+        const hasFinalCode = ui.finalCodeBlock.style.display !== 'none';
+        ui.copyFinalCodeBtn.disabled = !hasFinalCode;
+        ui.saveCodeBtn.disabled = !hasFinalCode;
+        ui.continueWithResultBtn.disabled = !hasAfterCode;
+    }
+    function showHelp() { 
+        const helpText = `**BASELINER v1.3.6: The Code Modernization Ecosystem**
+(Click this message to dismiss)
+
+This tool is an integrated environment to guide you through modernizing a codebase, from high-level analysis to precise, validated action.
+
+**The New Workflow: Audit → Explore → Act**
+1.  **AUDIT (High-Level View):** Use **'Audit Project'** to analyze a folder. Baseliner scans your files and generates a report, showing your project's technical debt and modernization opportunities.
+2.  **EXPLORE (Discover & Learn):** Use **'Explore Baseline'** to dive into the official Web Platform Baseline. Find modern alternatives to old patterns and instantly create new detection rules.
+3.  **ACT (Precise Action):** The **Intelligent Editor** ('Full JSON' view) gives you live feedback on your rules, ensuring they are accurate and powerful.
+
+**Understanding Rule Validation (✅ ❌ ✓)**
+- <span class="validation-ok">✅ **Valid:**</span> The rule is correctly linked to a modern feature tracked by Baseline.
+- <span class="validation-error">❌ **Invalid:**</span> The 'baselineFeatureId' is misspelled or doesn't exist. This needs to be fixed.
+- <span class="validation-exempt">✓ **Not Linked:**</span> This is intentional. The rule applies to a universal standard (like \`<strong>\` or \`let\`) that is too fundamental to be tracked by Baseline. The rule works perfectly but is exempt from validation.
+
+**Core Workflows (The Basics)**
+- **Quick Fixes:** Applies safe changes. In the diff view:
+  - <span style="background:var(--diff-added-bg); color: var(--text-color);">Green</span>/<span style="background:var(--diff-removed-bg); color: var(--text-color);">Red</span>: Automatic substitutions.
+  - <span style="background:var(--diff-detected-bg); color: var(--text-color);">Blue</span>: Patterns detected that may need an LLM to refactor.
+- **LLM Prompt:** Generates a targeted prompt for an AI, based on the patterns detected in your code.
+- **Supervision:** You can always edit code manually in the 'After' panel.
+  - <span style="background:var(--diff-manual-bg); color: var(--text-color);">Yellow</span>: Marks your manual edits.`;
+        showToast(helpText, 60000);
+    };
+    function showInfo() { showToast('**Tool Info:**\n\nVersion: 1.3.6 (Final Polish)\nAuthor: SMZ\nLicense: MIT', 5000); };
+    function runDemo() {
+        const demoKey = ui.demoSelector.value;
+        if (!demoKey) return;
+        ui.demoSelector.value = "";
+        if (demoKey === 'tour') return startGuidedTour();
+        if (demoKey === 'showcase') return startShowcaseDemo();
+        
+        ui.codeInput.value = `<!-- HTML Compatibility Demo -->
+<p align="center" style="color: red;"><font><b>This is bold</b></font>, <i>and this is italic</i>.</p>
+<table border="0">...</table>
+<!-- CSS Readability/Compatibility Demo -->
+<style> #demo-css { font-size: 16px; padding: 8px; float: left; } </style>
+<!-- JS Performance/Readability Demo -->
+<script>
+  var x = "10";
+  if (x == 10) { 
+    document.body.innerHTML = 'Performance issue!'; 
+    document.write("Don't use this!");
+  }
+  new Promise(r=>r()).then(res => console.log(res));
+<\/script>
+<!-- TXT Readability Demo -->
+This text has    multiple      spaces.
+
+And an extra empty line above.`;
+        const settings = {
+            html: { type: "HTML", baseline: "Widely Available", goal: "Compatibility" },
+            css: { type: "CSS", baseline: "Widely Available", goal: "Readability" },
+            js: { type: "JS", baseline: "Widely Available", goal: "Performance" },
+            'js-new': { type: "JS", baseline: "Widely Available", goal: "Readability" },
+            txt: { type: "TXT", baseline: "Widely Available", goal: "Readability" }
+        };
+        if (settings[demoKey]) {
+            ui.codeType.value = settings[demoKey].type;
+            ui.baselineLevel.value = settings[demoKey].baseline;
+            ui.goal.value = settings[demoKey].goal;
+            saveSelectorSettings();
+            updateActiveRulesHighlight();
+            applyQuickFixes();
+        }
+    };
+    function loadFileInto(textareaId) {
+        const input = document.createElement('input'); input.type = 'file';
+        input.onchange = e => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = re => { document.getElementById(textareaId).value = re.target.result; };
+                reader.readAsText(file, 'UTF-8');
+            }
+        };
+        input.click();
+    };
+    function validateAllRulesEditors() { ['HTML', 'CSS', 'JS', 'TXT'].forEach(type => validateRulesEditor(`rulesEditor${type}`)); }
+    function validateRulesEditor(editorId) {
+        const editor = document.getElementById(editorId);
+        const container = editor.closest('.editor-container');
+        const feedbackEl = container.querySelector('.validation-feedback');
+        const filterCheckbox = container.querySelector('.filter-errors-checkbox');
+        if (!editor || !feedbackEl) return;
+        try {
+            const rules = JSON.parse(editor.value);
+            if (!Array.isArray(rules)) throw new Error("JSON is not an array.");
+            const feedbackMessages = rules.map((rule, index) => {
+                const summary = escapeHTML(rule.summary);
+                let message, className;
+                if ('baselineFeatureId' in rule) {
+                    if (baselineData[rule.baselineFeatureId]) {
+                        className = 'validation-ok';
+                        message = `Rule ${index + 1} "${summary}": ✅ Valid.`;
+                    } else {
+                        className = 'validation-error';
+                        message = `Rule ${index + 1} "${summary}": ❌ Invalid ID "${escapeHTML(rule.baselineFeatureId)}".`;
+                    }
+                } else {
+                    className = 'validation-exempt';
+                    message = `Rule ${index + 1} "${summary}": ✓ Not linked (universal standard).`;
+                }
+                return { message, className, index };
+            });
+
+            const renderFeedback = () => {
+                const filteredMessages = filterCheckbox.checked ? feedbackMessages.filter(m => m.className === 'validation-error') : feedbackMessages;
+                feedbackEl.innerHTML = filteredMessages.map(m => `<span class="${m.className}" data-rule-index="${m.index}">${m.message}</span>`).join('<br>');
+                feedbackEl.querySelectorAll('span').forEach(span => {
+                    span.onmouseenter = () => highlightRuleInEditor(editor, parseInt(span.dataset.ruleIndex));
+                    span.onmouseleave = () => highlightRuleInEditor(editor, -1, true);
+                });
+            };
+            renderFeedback();
+        } catch (e) {
+            feedbackEl.innerHTML = `<span class="validation-error">Invalid JSON format.</span>`;
+        }
+    }
+    function highlightRuleInEditor(editor, ruleIndex, clear = false) {
+        if (clear) {
+            editor.setSelectionRange(editor.selectionStart, editor.selectionStart);
+            return;
+        }
+        try {
+            const rules = JSON.parse(editor.value);
+            const text = editor.value;
+            const targetRule = rules[ruleIndex];
+            const ruleTextForSearch = JSON.stringify(targetRule, null, 2);
+            let startIndex = text.indexOf(ruleTextForSearch);
+            if(startIndex !== -1) {
+                const endIndex = startIndex + ruleTextForSearch.length;
+                editor.focus();
+                editor.setSelectionRange(startIndex, endIndex);
+                editor.scrollTop = editor.scrollHeight * (startIndex / text.length) - 50;
+            }
+        } catch(e) {}
+    }
+    async function runProjectAudit() {
+        if(isShowcaseRunning) return; // Prevent file dialog during showcase
+        const input = document.createElement('input'); input.type = 'file'; input.webkitdirectory = true;
+        input.onchange = async (e) => {
+            const files = e.target.files; if (!files.length) return;
+            showToast(`Auditing ${files.length} files...`, 2000);
+            const unifiedJson = getUnifiedRulesFromEditor(); if(unifiedJson === 'INVALID_JSON') return showToast('Audit failed: Invalid JSON in rules.', 4000);
+            const allDetectRules = JSON.parse(unifiedJson).filter(r => r.action === 'detect'); const report = {};
+            for (const file of files) {
+                const extension = file.name.split('.').pop(); if (!['html', 'css', 'js'].includes(extension)) continue;
+                const content = await file.text();
+                
+                const applicableRules = allDetectRules.filter(rule => {
+                    const fileType = extension.toUpperCase();
+                    if (fileType === 'HTML') {
+                        return rule.type.includes('HTML') || rule.type.includes('JS') || rule.type.includes('CSS');
+                    }
+                    return rule.type.includes(fileType);
+                });
+
+                applicableRules.forEach(rule => {
+                    try { if (new RegExp(rule.find, rule.flags).test(content)) {
+                            const featureName = (rule.baselineFeatureId && baselineData[rule.baselineFeatureId])?.name || rule.summary.replace('🔍 ', '');
+                            if (!report[featureName]) report[featureName] = [];
+                            report[featureName].push(file.webkitRelativePath || file.name);
+                    } } catch (err) {}
+                });
+            }
+            renderAuditReport(report, files.length);
+        };
+        input.click();
+    }
+    function renderAuditReport(reportData, totalFiles) {
+        const reportEntries = Object.entries(reportData);
+        let html = `<h4>Analyzed ${totalFiles} files. Found ${reportEntries.length} patterns:</h4>`;
+        if (reportEntries.length === 0) html += "<p>Congratulations! No patterns from your detection rules were found.</p>";
+        else html += reportEntries.map(([featureName, fileList]) => `<div><h4>${escapeHTML(featureName)} (${fileList.length} files)</h4><ul>${fileList.slice(0, 5).map(path => `<li>${escapeHTML(path)}</li>`).join('')}${fileList.length > 5 ? `<li>...and ${fileList.length - 5} more.</li>` : ''}</ul></div>`).join('');
+        ui.auditReport.innerHTML = html; ui.auditModal.style.display = 'flex';
+    }
+    async function runBaselineSearch() {
+        const { value: group } = ui.explorerGroup, { value: status } = ui.explorerStatus; let query = [];
+        if (group) query.push(`group:${group}`); if (status) query.push(`baseline_status:${status}`);
+        const q = query.length > 0 ? query.join(' AND ') : '-baseline_status:limited';
+        ui.explorerResults.innerHTML = '<li>Searching API...</li>';
+        try {
+            const { data } = await (await fetch(`https://api.webstatus.dev/v1/features?q=${encodeURIComponent(q)}`)).json();
+            explorerDataCache = data || [];
+            filterExplorerResults();
+        } catch (e) { ui.explorerResults.innerHTML = '<li>Error fetching data. Please try again.</li>'; }
+    }
+    function filterExplorerResults() {
+        const searchTerm = ui.explorerSearchInput.value.toLowerCase();
+        const filteredData = searchTerm ? explorerDataCache.filter(f => f.name.toLowerCase().includes(searchTerm)) : explorerDataCache;
+        ui.explorerResults.innerHTML = filteredData.length > 0 ? filteredData.map(f => {
+            const url = f.mdn_url || f.spec?.links?.[0]?.url || '#';
+            return `<li><span><a href="${url}" target="_blank" rel="noopener noreferrer">${escapeHTML(f.name)}</a></span><button class="utility-btn create-rule-btn" data-id="${escapeHTML(f.feature_id)}" data-name="${escapeHTML(f.name)}" data-status="${escapeHTML(f.baseline.status)}">Create Rule</button></li>`
+        }).join('') : '<li>No features match your search.</li>';
+    }
+    function handleExplorerClick(e) {
+        if (!e.target.classList.contains('create-rule-btn')) return;
+        const { id, name, status } = e.target.dataset;
+        const newRule = { summary: `🔍 ${name}`, action: "detect", find: `...`, flags: "g", baseline: [status === 'widely' ? 'Widely Available' : 'Newly Available'], goal: ["Readability", "Compatibility", "Performance"], baselineFeatureId: id };
+        let type = id.startsWith('css') ? 'CSS' : (id.startsWith('html') ? 'HTML' : 'JS');
+        newRule.type = [type];
+        const targetEditor = ui[`rulesEditor${type}`];
+        try {
+            const existingRules = JSON.parse(targetEditor.value || '[]');
+            existingRules.push(newRule);
+            targetEditor.value = JSON.stringify(existingRules, null, 2);
+            showToast(`Rule for "${name}" added! Please add a 'find' pattern.`, 5000);
+            ui.explorerModal.style.display = 'none';
+            togglePanel('rulesPanelContent', 'open');
+            showRulesEditor();
+            validateRulesEditor(targetEditor.id);
+        } catch (err) { showToast('Could not add new rule. Check editor for valid JSON.', 5000); }
+    }
+    function startGuidedTour() {
+        const tourStep1 = () => showTourMessage(`**Welcome to the Guided Tour!** We'll now add a faulty rule to show how Baseliner helps you find and fix it.`, tourStep2);
+        const tourStep2 = () => {
+            const faultyRule = { summary: "🔍 Promise .then()", action: "detect", find: "\\.then\\s*\\(", flags: "g", type: ["JS"], baseline: ["Newly Available"], goal: ["Readability"], baselineFeatureId: "javascript.builtins.Promise.then" };
+            try {
+                const jsRules = JSON.parse(ui.rulesEditorJS.value);
+                if (!jsRules.find(r => r.baselineFeatureId === faultyRule.baselineFeatureId)) { jsRules.push(faultyRule); ui.rulesEditorJS.value = JSON.stringify(jsRules, null, 2); }
+            } catch(e) {}
+            togglePanel('rulesPanelContent', 'open');
+            showRulesEditor(); validateAllRulesEditors();
+            showTourMessage(`**STEP 1: AUDIT** The Intelligent Editor found an invalid ID (see ❌). Now, let's find the correct ID.`, tourStep3);
+        };
+        const tourStep3 = () => {
+            ui.explorerModal.style.display = 'flex';
+            const observer = new MutationObserver(() => {
+                try {
+                    const ruleText = ui.rulesEditorJS.value;
+                    const rules = JSON.parse(ruleText);
+                    const isFixed = rules.some(rule => rule.summary.includes('Promise') && !rule.baselineFeatureId?.includes('.then') && baselineData[rule.baselineFeatureId]);
+                    if (isFixed) {
+                        tourStep4();
+                        observer.disconnect();
+                    }
+                } catch(e) {}
+            });
+            observer.observe(ui.validationJS, { childList: true, characterData: true, subtree: true });
+            showTourMessage(`**STEP 2: EXPLORE** Use the search bar to find 'Promise'. You'll see modern additions like 'Promise.withResolvers()'.<br><br>**Your task:** Close this, and fix the rule's ID using one you found (e.g., \`promise-withresolvers\`). The tour will continue automatically.`);
+        };
+        const tourStep4 = () => showTourMessage(`**STEP 3: ACT** Excellent! The rule is now valid (✅). You completed the **Audit → Explore → Act** cycle.`, endTour);
+        loadDefaultRules(); ui.tourConsole.style.display = 'flex'; ui.tourMessages.innerHTML = '';
+        setTimeout(tourStep1, 100);
+    }
+    function speak(text) {
+        if (isTourMuted || !('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/<br>/g, ' '));
+        if (englishVoice) utterance.voice = englishVoice;
+        speechSynthesis.speak(utterance);
+    }
+    function toggleTourMute() {
+        isTourMuted = !isTourMuted;
+        ui.tourMuteBtn.textContent = isTourMuted ? '🔇' : '🔊';
+        if (isTourMuted) window.speechSynthesis.cancel();
+    }
+    function showTourMessage(text, nextStepFn = null) {
+        const messageDiv = document.createElement('div'); messageDiv.className = 'tour-message';
+        const textP = document.createElement('p'); textP.innerHTML = text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        messageDiv.appendChild(textP);
+        if (nextStepFn) {
+            const nextBtn = document.createElement('button'); nextBtn.textContent = 'Next →';
+            nextBtn.onclick = () => { nextBtn.disabled = true; nextStepFn(); };
+            messageDiv.appendChild(nextBtn);
+        }
+        ui.tourMessages.appendChild(messageDiv);
+        ui.tourMessages.scrollTop = ui.tourMessages.scrollHeight;
+        speak(text);
+    }
+    function endTour() {
+        ui.tourConsole.style.display = 'none';
+        ui.tourMessages.innerHTML = '';
+        window.speechSynthesis.cancel();
+        loadDefaultRules();
+        showToast('Tour complete!', 3000);
+    }
+    function makeDraggable(element, handle) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        handle.onmousedown = dragMouseDown;
+        function dragMouseDown(e) {
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+        function elementDrag(e) {
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            element.style.top = (element.offsetTop - pos2) + "px";
+            element.style.left = (element.offsetLeft - pos1) + "px";
+        }
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
+
+    // --- Showcase Demo Engine ---
+    let isShowcaseRunning = false;
+    let showcaseOriginalCode = '';
+    const panelIds = ['codeInput', 'promptOutput', 'llmOutput', 'rulesPanelContent'];
+
+    function focusOnPanel(targetId) {
+        panelIds.forEach(id => togglePanel(id, id === targetId ? 'open' : 'closed'));
+    }
+
+    async function showcaseSpeakAndWait(text) {
+        if (isTourMuted || !('speechSynthesis' in window)) return Promise.resolve();
+        
+        return new Promise((resolve) => {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/<br>/g, ' '));
+            if (englishVoice) utterance.voice = englishVoice;
+            utterance.onend = resolve;
+            utterance.onerror = (e) => {
+                console.error("Speech synthesis error", e);
+                resolve(); // Resolve anyway to not block the demo
+            };
+            speechSynthesis.speak(utterance);
+        });
+    }
+    
+    const showcaseSequence = [
+        // --- Scene 1: Introduction & Purpose ---
+        { action: 'narrate', text: "Welcome to Baseliner.", target: ui.mainHeader },
+        { action: 'click', target: ui.showHelpBtn },
+        { action: 'narrate', text: "This tool is an integrated environment to guide you through modernizing a codebase, from high-level analysis to precise, validated action.", target: document.querySelector('.toast')},
+        { action: 'wait', duration: 4000},
+        { action: 'execute', func: () => { const toast = document.querySelector('.toast'); if (toast) toast.click(); }},
+        { action: 'narrate', text: "It's connected to the Web Platform Baseline, ensuring all recommendations are based on live, standardized data.", target: ui.connectionStatus },
+
+        // --- Scene 2: The First Step - Project Audit ---
+        { action: 'narrate', text: "The first step in any modernization project is a high-level analysis. Let's run a project audit.", target: ui.auditProjectBtn },
+        { action: 'execute', func: () => {
+            showcaseHighlight(ui.auditProjectBtn);
+            const fakeReport = `<h4>Analyzed 58 files. Found 4 patterns:</h4>
+            <div><h4>Inline Style Attr (12 files)</h4><ul><li>components/header.html</li><li>views/legacy.html</li><li>...and 10 more.</li></ul></div>
+            <div><h4>document.write (3 files)</h4><ul><li>scripts/ads.js</li><li>scripts/tracker.js</li><li>...and 1 more.</li></ul></div>
+            <div><h4>float (8 files)</h4><ul><li>styles/layout.css</li><li>styles/sidebar.css</li><li>...and 6 more.</li></ul></div>
+            <div><h4>var (21 files)</h4><ul><li>scripts/main.js</li><li>scripts/utils.js</li><li>...and 19 more.</li></ul></div>`;
+            renderAuditReport({},0); // Render empty first to open modal
+            ui.auditReport.innerHTML = fakeReport;
+        }},
+        { action: 'narrate', text: "The audit gives us a clear roadmap. Now, let's focus on one of those files.", target: ui.auditReport },
+        { action: 'click', target: ui.auditCloseBtn },
+
+        // --- Scene 3: Focusing on a File & Exploring Solutions ---
+        { action: 'execute', func: () => focusOnPanel('codeInput') },
+        { action: 'type', narration: "We'll work with this piece of outdated code. Notice the old font tags, inline styles, and legacy JavaScript.", target: ui.codeInput, params: { speed: 30, text: `<!-- Outdated HTML, CSS, and JS -->\n<p align="center"><font><b>Old text</b></font></p>\n<style>\n  #demo { float: left; font-size: 16px; }\n</style>\n<script>\n  var x = "10";\n  if (x == 10) { document.write("Problem!"); }\n<\/script>` } },
+        { action: 'narrate', text: "Before we act, let's configure our approach. These options allow us to define our goal, like improving Readability.", target: ui.optionsRow },
+        { action: 'narrate', text: "This context is crucial, as it guides both the automatic Quick Fixes...", target: ui.applyQuickFixesBtn },
+        { action: 'narrate', text: "...and the prompt we'll generate for the L.L.M.", target: ui.generatePromptBtn },
+        { action: 'narrate', text: "The audit mentioned 'float'. Let's explore modern alternatives.", target: ui.exploreBaselineBtn },
+        { action: 'click', target: ui.exploreBaselineBtn, postDelay: 500 },
+        { action: 'type', narration: "A quick search shows us Flexbox and Grid as modern solutions.", target: ui.explorerSearchInput, params: { text: 'float', speed: 100 } },
+        { action: 'execute', func: () => { ui.explorerResults.innerHTML = `<li><span><a href="#" target="_blank">CSS Flexible Box Layout</a></span><button class="utility-btn">Create Rule</button></li><li><span><a href="#" target="_blank">CSS Grid Layout</a></span><button class="utility-btn">Create Rule</button></li>`; }},
+        { action: 'click', target: ui.explorerCloseBtn },
+        
+        // --- Scene 4: Customizing the Engine - The Rules ---
+        { action: 'narrate', text: "Baseliner's power comes from its rules, which are fully customizable.", target: ui.rulesPanelHeader },
+        { action: 'click', target: ui.rulesPanelHeader },
+        { action: 'narrate', text: "The summary view shows all rules at a glance, while the full JSON editor provides live validation, ensuring every rule is effective.", target: ui.rulesSummary },
+        { action: 'click', target: ui.showRulesEditorBtn },
+        { action: 'wait', duration: 2000 },
+        { action: 'click', target: ui.rulesPanelHeader },
+
+        // --- Scene 5: Workflow Part 1 - Automatic Quick Fixes ---
+        { action: 'narrate', text: "Let's start our refactoring. First, we'll apply safe, automatic Quick Fixes for low-risk improvements.", target: ui.applyQuickFixesBtn },
+        { action: 'click', target: ui.applyQuickFixesBtn, postDelay: 1000 },
+        { action: 'narrate', text: "The tool makes the simple changes and highlights complex issues, like 'document.write', that need a closer look.", target: ui.afterCode },
+
+        // --- Scene 6: Workflow Part 2 - Iteration and AI-Assisted Refactoring ---
+        { action: 'narrate', text: "For these complex problems, we'll use an iterative workflow. First, we generate the code from our initial pass.", target: ui.generateFinalCodeBtn },
+        { action: 'click', target: ui.generateFinalCodeBtn },
+        { action: 'narrate', text: "Then, we use this result as our new starting point.", target: ui.continueWithResultBtn },
+        { action: 'click', target: ui.continueWithResultBtn },
+        { action: 'narrate', text: "With the easy fixes applied, we now generate a targeted prompt for an L.L.M., focusing only on the remaining complex issues.", target: ui.generatePromptBtn },
+        { action: 'click', target: ui.generatePromptBtn },
+        { action: 'execute', func: () => focusOnPanel('llmOutput') },
+        { action: 'type', narration: "We paste the AI's suggestion here...", target: ui.llmOutput, params: { speed: 20, text: `<p style="text-align: center;"><strong>Modern text</strong></p>\n<style>\n  #demo {\n    display: flex; /* Replaced float with Flexbox */\n    font-size: 1rem; /* Replaced px with rem */\n  }\n</style>\n<script>\n  const x = "10";\n  if (x === 10) {\n    // document.write removed for modern equivalent\n    document.getElementById('demo').textContent = "Success!";\n  }\n<\/script>` } },
+        { action: 'execute', narration: "And now, we'll compare the final AI-assisted result against our original code, showing the complete transformation.", func: () => {
+            highlightDiffInteractive(showcaseOriginalCode, ui.llmOutput.value);
+            showcaseHighlight(document.querySelector('.bottom-section h2'));
+        }},
+        { action: 'narrate', text: "The 'After' panel is still fully editable, ensuring you always have the final say.", target: ui.afterCode },
+        
+        // --- Scene 7: The Final Result ---
+        { action: 'narrate', text: "Once satisfied, you generate the final, consolidated code.", target: ui.generateFinalCodeBtn },
+        { action: 'click', target: ui.generateFinalCodeBtn, postDelay: 500 },
+        { action: 'narrate', text: "Baseliner... Modernize your web, intelligently.", target: ui.copyFinalCodeBtn },
+        { action: 'click', target: ui.copyFinalCodeBtn },
+        { action: 'narrate', text: "Thank you for watching.", target: ui.showInfoBtn },
+        { action: 'click', target: ui.showInfoBtn }
+    ];
+
+    async function showcaseWait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+    function showcaseHighlight(target, duration) {
+        if (!target) return;
+        const highlightDuration = duration || 2500;
+        target.classList.add('showcase-highlight');
+        setTimeout(() => target.classList.remove('showcase-highlight'), highlightDuration);
+    }
+    async function showcaseClick(target, options = {}) {
+        if (!target) return;
+        showcaseHighlight(target, 1200);
+        await showcaseWait(options.preDelay || 250);
+        target.click();
+        await showcaseWait(options.postDelay || 250);
+    }
+    async function showcaseType(target, text, speed = 40) {
+        if (!target || typeof text === 'undefined') {
+            console.error("showcaseType failed: target or text is undefined.", {target, text});
+            return;
+        }
+        target.value = '';
+        target.focus();
+        showcaseHighlight(target.closest('.panel') || target, text.length * speed + 500);
+        for (const char of text) {
+            target.value += char;
+            target.dispatchEvent(new Event('input')); 
+            target.scrollTop = target.scrollHeight;
+            await showcaseWait(speed);
+        }
+    }
+
+    async function startShowcaseDemo() {
+        if (isShowcaseRunning) return showToast("Showcase is already running.", 2000);
+        isShowcaseRunning = true;
+        showToast('Starting Programmatic Showcase...', 2000);
+
+        loadDefaultRules();
+        ui.codeInput.value = ''; ui.llmOutput.value = ''; ui.promptOutput.value = '';
+        ui.beforeCode.innerHTML = ''; ui.afterCode.innerHTML = '';
+        ui.finalCodeBlock.style.display = 'none';
+        focusOnPanel(null);
+        
+        showcaseOriginalCode = `<!-- Outdated HTML, CSS, and JS -->\n<p align="center"><font><b>Old text</b></font></p>\n<style>\n  #demo { float: left; font-size: 16px; }\n</style>\n<script>\n  var x = "10";\n  if (x == 10) { document.write("Problem!"); }\n<\/script>`;
+
+        await showcaseWait(1000);
+
+        for (const step of showcaseSequence) {
+            await showcaseWait(step.preDelay || 200);
+
+            switch (step.action) {
+                case 'narrate':
+                    if (step.target) showcaseHighlight(step.target);
+                    if (step.text) await showcaseSpeakAndWait(step.text);
+                    break;
+                case 'type':
+                    if (step.narration) showcaseSpeakAndWait(step.narration);
+                    await showcaseType(step.target, step.params.text, step.params.speed);
+                    break;
+                case 'click':
+                    await showcaseClick(step.target, { postDelay: step.postDelay });
+                    break;
+                case 'execute':
+                    if (step.narration) await showcaseSpeakAndWait(step.narration);
+                    if (step.func) step.func();
+                    break;
+                case 'wait':
+                    if (step.text) await showcaseSpeakAndWait(step.text);
+                    await showcaseWait(step.duration);
+                    break;
+            }
+            const postDelay = step.postDelay || (step.action === 'narrate' ? 400 : 200);
+            await showcaseWait(postDelay);
+        }
+
+        isShowcaseRunning = false;
+        showToast('Showcase complete!', 3000);
+        ui.demoSelector.value = "";
+    }
+    
+    initializeAll();
+});
+</script>
+</body>
+</html>
