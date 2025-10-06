@@ -42,7 +42,7 @@ BASELINER is built around a powerful and intuitive workflow:
 
 The easiest way to try BASELINER is through the live GitHub Pages demo:
 
-**[▶️ Open the Live Application](https://metaquid.github.io/baseliner/index.html)**
+**[▶️ Open the Live Application](https://metaquid.github.io/baseliner/)**
 
 ### 2. Running Locally
 
